@@ -1164,7 +1164,7 @@
             return registrarToken(intentoNumero + 1);
           }
           console.error('No se pudo registrar el token push:', err);
-          estadoEl.textContent = 'No se pudieron activar las notificaciones (' + (err.code || err.message || 'error desconocido') + '). Toca el botón para intentar de nuevo.';
+          estadoEl.textContent = 'No se pudieron activar las notificaciones (' + (err.name || err.code || '?') + ': ' + (err.message || 'sin detalle') + '). Toca el botón para intentar de nuevo.';
           btn.textContent = '🔔 Intentar de nuevo';
           btn.disabled = false;
         }
