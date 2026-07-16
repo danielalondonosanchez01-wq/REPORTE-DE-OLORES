@@ -1140,7 +1140,9 @@
           }
         } catch(err){
           console.error('No se pudo registrar el token push:', err);
-          estadoEl.textContent = 'No se pudieron activar las notificaciones. Intenta de nuevo o revisa que el proyecto tenga el plan Blaze activado.';
+          estadoEl.textContent = 'No se pudieron activar las notificaciones (' + (err.code || err.message || 'error desconocido') + '). Toca el botón para intentar de nuevo.';
+          btn.textContent = '🔔 Intentar de nuevo';
+          btn.disabled = false;
         }
       }
 
