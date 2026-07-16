@@ -24,10 +24,110 @@
 // ============================================================
 
 export const firebaseConfig = {
-  apiKey: "PEGA_AQUI_TU_apiKey",
-  authDomain: "PEGA_AQUI_TU_authDomain",
-  projectId: "PEGA_AQUI_TU_projectId",
-  storageBucket: "PEGA_AQUI_TU_storageBucket",
-  messagingSenderId: "PEGA_AQUI_TU_messagingSenderId",
+  apiKey: "// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDTP3i8fXawO4wP6svcdHcdv4iJ8cDFpDE",
+  authDomain: "reporte-de-olores.firebaseapp.com",
+  projectId: "reporte-de-olores",
+  storageBucket: "reporte-de-olores.firebasestorage.app",
+  messagingSenderId: "32218096292",
+  appId: "1:32218096292:web:9300195520faf3f692fc31",
+  measurementId: "G-YZFBP781R6"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);",
+  authDomain: "// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDTP3i8fXawO4wP6svcdHcdv4iJ8cDFpDE",
+  authDomain: "reporte-de-olores.firebaseapp.com",
+  projectId: "reporte-de-olores",
+  storageBucket: "reporte-de-olores.firebasestorage.app",
+  messagingSenderId: "32218096292",
+  appId: "1:32218096292:web:9300195520faf3f692fc31",
+  measurementId: "G-YZFBP781R6"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);",
+  projectId: "// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDTP3i8fXawO4wP6svcdHcdv4iJ8cDFpDE",
+  authDomain: "reporte-de-olores.firebaseapp.com",
+  projectId: "reporte-de-olores",
+  storageBucket: "reporte-de-olores.firebasestorage.app",
+  messagingSenderId: "32218096292",
+  appId: "1:32218096292:web:9300195520faf3f692fc31",
+  measurementId: "G-YZFBP781R6"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);",
+  storageBucket: "// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDTP3i8fXawO4wP6svcdHcdv4iJ8cDFpDE",
+  authDomain: "reporte-de-olores.firebaseapp.com",
+  projectId: "reporte-de-olores",
+  storageBucket: "reporte-de-olores.firebasestorage.app",
+  messagingSenderId: "32218096292",
+  appId: "1:32218096292:web:9300195520faf3f692fc31",
+  measurementId: "G-YZFBP781R6"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);",
+  messagingSenderId: "// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDTP3i8fXawO4wP6svcdHcdv4iJ8cDFpDE",
+  authDomain: "reporte-de-olores.firebaseapp.com",
+  projectId: "reporte-de-olores",
+  storageBucket: "reporte-de-olores.firebasestorage.app",
+  messagingSenderId: "32218096292",
+  appId: "1:32218096292:web:9300195520faf3f692fc31",
+  measurementId: "G-YZFBP781R6"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);",
   appId: "PEGA_AQUI_TU_appId"
 };
