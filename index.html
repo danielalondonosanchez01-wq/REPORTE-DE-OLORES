@@ -224,6 +224,10 @@
   .insight-card{ background:#fff7ed; border:1px solid #f3d9b8; border-radius:16px; padding:13px 14px; font-size:12.5px; color:#6b4423; line-height:1.5; font-weight:600; }
   .data-note{ font-size:10.5px; color:var(--ink-muted); margin-top:14px; line-height:1.5; }
 
+  .btn-download{ border:1.5px solid var(--hairline); background:#fff; color:var(--ink); font-size:13px; font-weight:700; padding:12px; border-radius:14px; cursor:pointer; text-align:center; }
+  .btn-download:active{ transform:scale(.98); }
+  .btn-download:disabled{ opacity:.6; }
+
   /* ---------- tab bar ---------- */
   .tabbar{
     flex:0 0 auto; display:flex; align-items:center; justify-content:space-around;
@@ -500,6 +504,13 @@
       <div class="section-title">Recomendación</div>
       <div class="insight-card">💡 Reforzar el aseo preventivo antes de la franja noche (6:00–8:30 p. m.) — cuando se refuerza, no se ha registrado mal olor.</div>
       <div class="data-note">Estas cifras son de tu matriz real (24 jun–14 jul). Los reportes y aseos nuevos que registres aquí se guardan en la base de datos compartida del equipo, no solo en este celular.</div>
+
+      <div class="section-title">Descargar datos</div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button class="btn-download" id="btn-descargar-casos">⬇️ Reportes de mal olor (.csv)</button>
+        <button class="btn-download" id="btn-descargar-adhoc">⬇️ Aseos sin programar (.csv)</button>
+      </div>
+      <div class="data-note">Se descarga todo lo registrado hasta ahora por todo el equipo. Los archivos .csv se abren directo en Excel.</div>
     </section>
 
   </div>
@@ -529,6 +540,8 @@
 
   const ADHOC_SEED_COUNT = 2; // los 2 ejemplos ya escritos en el HTML (historial real de la matriz)
   let dbRef = null; // se asigna más abajo si Firebase queda bien conectado
+  let ultimosCasos = null; // se llena con el listener en tiempo real; null = todavía no ha cargado
+  let ultimosAdhoc = null; // ídem, para poder descargar el CSV al toque sin esperar una consulta nueva
 
   // ---------- utilidades ----------
   function horaAhora(){
@@ -555,6 +568,29 @@
     const div = document.createElement('div');
     div.textContent = String(str == null ? '' : str);
     return div.innerHTML;
+  }
+  function fechaHoraLegible(ms){
+    if(!ms) return '';
+    const d = new Date(ms);
+    return d.toLocaleDateString('es-CO') + ' ' + d.toLocaleTimeString('es-CO', { hour:'numeric', minute:'2-digit' });
+  }
+  function csvEscape(valor){
+    const str = valor == null ? '' : String(valor);
+    if(/[",\n]/.test(str)) return '"' + str.replace(/"/g, '""') + '"';
+    return str;
+  }
+  function descargarCsv(nombreArchivo, filas){
+    // BOM al inicio para que Excel muestre bien tildes y "ñ".
+    const csv = filas.map(fila => fila.map(csvEscape).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombreArchivo;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
   function mostrarErrorInline(mensaje){
     let el = document.getElementById('error-inline');
@@ -782,6 +818,30 @@
     document.getElementById('preventivos-list-state').classList.remove('hidden');
   });
 
+  // ---------- Descargar datos (.csv) ----------
+  // Importante: se usan ultimosCasos/ultimosAdhoc (ya guardados en memoria por
+  // el listener en tiempo real) en vez de pedirle los datos a Firestore en este
+  // momento — así el clic dispara la descarga al instante, sin ningún "await"
+  // en medio, porque Safari en iPhone solo permite descargar archivos cuando
+  // la descarga ocurre inmediatamente dentro del toque del usuario.
+  document.getElementById('btn-descargar-casos').addEventListener('click', () => {
+    if(ultimosCasos === null){ mostrarErrorInline('Todavía está cargando la información. Espera un segundo e intenta de nuevo.'); return; }
+    const filas = [['Fecha y hora', 'Zona', 'Afectó a un cliente', 'Intensidad', 'Comentario']];
+    ultimosCasos.forEach(c => {
+      filas.push([fechaHoraLegible(c.createdAtMs), c.zona, c.afectoCliente ? 'Sí' : 'No', c.intensidad, c.comentario || '']);
+    });
+    descargarCsv('reportes-mal-olor.csv', filas);
+  });
+
+  document.getElementById('btn-descargar-adhoc').addEventListener('click', () => {
+    if(ultimosAdhoc === null){ mostrarErrorInline('Todavía está cargando la información. Espera un segundo e intenta de nuevo.'); return; }
+    const filas = [['Fecha y hora', 'Zona', 'Nombre', 'Método', 'Comentario']];
+    ultimosAdhoc.forEach(a => {
+      filas.push([fechaHoraLegible(a.createdAtMs), a.zona, a.nombre, a.metodo || '', a.comentario || '']);
+    });
+    descargarCsv('aseos-sin-programar.csv', filas);
+  });
+
   // ============================================================
   // Conexión: autenticación anónima + escucha en tiempo real
   // ============================================================
@@ -839,11 +899,13 @@
       if(casosListo){
         snap.docChanges().forEach(c => { if(c.type === 'added') nuevos.add(c.doc.id); });
       }
+      ultimosCasos = [];
       snap.forEach(docSnap => {
         const caso = docSnap.data();
         const pulse = nuevos.has(docSnap.id);
         liveCasos.appendChild(construirCaso(caso, pulse));
         liveActividad.appendChild(construirActividad(caso, pulse));
+        ultimosCasos.push(caso);
       });
       document.getElementById('stat-en-curso').textContent = String(snap.size);
       casosListo = true;
@@ -853,7 +915,8 @@
     onSnapshot(qAdhoc, (snap) => {
       const liveAdhoc = document.getElementById('adhoc-list-live');
       liveAdhoc.innerHTML = '';
-      snap.forEach(docSnap => liveAdhoc.appendChild(construirAdhoc(docSnap.data())));
+      ultimosAdhoc = [];
+      snap.forEach(docSnap => { liveAdhoc.appendChild(construirAdhoc(docSnap.data())); ultimosAdhoc.push(docSnap.data()); });
       document.getElementById('adhoc-count').textContent = String(ADHOC_SEED_COUNT + snap.size);
     }, (err) => console.warn('No se pudieron leer los aseos registrados:', err));
 
