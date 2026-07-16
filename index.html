@@ -1081,7 +1081,12 @@
   if('serviceWorker' in navigator){
     window.addEventListener('load', async () => {
       try {
-        swReg = await navigator.serviceWorker.register('sw.js');
+        await navigator.serviceWorker.register('sw.js');
+        // Importante: esperar a que el service worker quede "activo" de verdad
+        // (no solo registrado) antes de guardarlo — si no, pedir el token de
+        // notificaciones push justo después puede fallar con un error raro
+        // tipo "no active Service Worker" (nos pasó probándolo).
+        swReg = await navigator.serviceWorker.ready;
         intentarConfigurarPush();
       } catch(err) {
         console.warn('Service worker no disponible:', err); // la app sigue funcionando online
@@ -1127,9 +1132,16 @@
     try {
       const messaging = getMessaging(appRef);
 
-      async function registrarToken(){
+      async function registrarToken(intentoNumero){
+        intentoNumero = intentoNumero || 1;
         try {
-          const token = await getToken(messaging, { vapidKey: firebaseConfig.vapidKey, serviceWorkerRegistration: swReg });
+          // A veces, justo después de instalar/activar el service worker, el
+          // primer intento falla con un error raro aunque todo esté bien
+          // configurado — un segundo intento uno o dos segundos después casi
+          // siempre funciona, así que lo reintentamos solo una vez antes de
+          // mostrar el error de verdad.
+          const regActiva = await navigator.serviceWorker.ready;
+          const token = await getToken(messaging, { vapidKey: firebaseConfig.vapidKey, serviceWorkerRegistration: regActiva });
           if(token){
             await setDoc(doc(dbRef, 'deviceTokens', token), {
               token, updatedAtMs: Date.now(), createdAtMs: Date.now()
@@ -1139,6 +1151,10 @@
             btn.disabled = true;
           }
         } catch(err){
+          if(intentoNumero < 2){
+            await new Promise(r => setTimeout(r, 1500));
+            return registrarToken(intentoNumero + 1);
+          }
           console.error('No se pudo registrar el token push:', err);
           estadoEl.textContent = 'No se pudieron activar las notificaciones (' + (err.code || err.message || 'error desconocido') + '). Toca el botón para intentar de nuevo.';
           btn.textContent = '🔔 Intentar de nuevo';
