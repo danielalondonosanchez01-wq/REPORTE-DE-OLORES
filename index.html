@@ -1078,15 +1078,23 @@
   }
 
   // ---------- service worker (para que abra sin señal, y reciba notificaciones push) ----------
+  function esperarSwListo(msMax){
+    // navigator.serviceWorker.ready normalmente resuelve rápido, pero en
+    // algunos celulares (sobre todo iPhone, justo después de reinstalar la
+    // app) se puede quedar esperando más de la cuenta. Para no dejar la
+    // pantalla de notificaciones "pegada" para siempre, si tarda más de
+    // msMax simplemente seguimos con lo que ya tengamos.
+    return Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise(resolve => setTimeout(() => resolve(null), msMax))
+    ]);
+  }
   if('serviceWorker' in navigator){
     window.addEventListener('load', async () => {
       try {
-        await navigator.serviceWorker.register('sw.js');
-        // Importante: esperar a que el service worker quede "activo" de verdad
-        // (no solo registrado) antes de guardarlo — si no, pedir el token de
-        // notificaciones push justo después puede fallar con un error raro
-        // tipo "no active Service Worker" (nos pasó probándolo).
-        swReg = await navigator.serviceWorker.ready;
+        const reg = await navigator.serviceWorker.register('sw.js');
+        const listo = await esperarSwListo(6000);
+        swReg = listo || reg;
         intentarConfigurarPush();
       } catch(err) {
         console.warn('Service worker no disponible:', err); // la app sigue funcionando online
@@ -1140,7 +1148,7 @@
           // configurado — un segundo intento uno o dos segundos después casi
           // siempre funciona, así que lo reintentamos solo una vez antes de
           // mostrar el error de verdad.
-          const regActiva = await navigator.serviceWorker.ready;
+          const regActiva = await esperarSwListo(4000) || swReg;
           const token = await getToken(messaging, { vapidKey: firebaseConfig.vapidKey, serviceWorkerRegistration: regActiva });
           if(token){
             await setDoc(doc(dbRef, 'deviceTokens', token), {
