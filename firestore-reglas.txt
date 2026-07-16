@@ -1,0 +1,12 @@
+Pega este texto completo en Firebase Console → Firestore Database → pestaña "Reglas" (reemplaza todo lo que haya) y dale a "Publicar".
+
+Qué hace: solo permite leer y escribir a alguien que entró a través de la app (aunque sea de forma anónima, sin contraseña). Bloquea que alguien externo escriba directo a la base de datos sin pasar por la app.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Reportar Olores</title>
+
+<!-- Instalable en iPhone: Safari → Compartir → "Agregar a inicio" -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#eb6834">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Reportar">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+<link rel="icon" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" sizes="32x32" href="icons/icon-32.png">
+
+<style>
+  :root{
+    --orange:#eb6834;
+    --orange-dark:#c2481c;
+    --orange-pale:#fdece3;
+    --green:#0ca30c;
+    --green-dark:#098509;
+    --green-pale:#e6f7e6;
+    --ink:#0b0b0b;
+    --ink-2:#52514e;
+    --ink-muted:#898781;
+    --surface:#fcfcfb;
+    --page:#f2f1ee;
+    --hairline:#e6e5e0;
+    --border:rgba(11,11,11,0.10);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0; overscroll-behavior:none;}
+  html{ height:100%; }
+  body{
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background:var(--surface);
+    color:var(--ink);
+    height:100vh; height:100dvh;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+
+  /* ---------- screens ---------- */
+  .screens{ position:relative; flex:1 1 auto; overflow:hidden; }
+  .screen{
+    position:absolute; inset:0; overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:env(safe-area-inset-top) 18px calc(env(safe-area-inset-bottom) + 24px);
+    opacity:0; transform:translateY(10px);
+    pointer-events:none;
+    transition:opacity .28s ease, transform .28s ease;
+  }
+  .screen.active{ opacity:1; transform:translateY(0); pointer-events:auto; }
+
+  .screen-header{ font-size:19px; font-weight:800; margin:16px 0 14px; letter-spacing:-0.01em; }
+  .section-title{ font-size:12.5px; font-weight:700; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.04em; margin:22px 0 10px; }
+
+  /* ---------- Inicio ---------- */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding-top:18px; }
+  .hello{ font-size:17px; font-weight:800; }
+  .venue{ font-size:12.5px; color:var(--ink-2); margin-top:2px; }
+  .bell{ position:relative; font-size:19px; width:38px; height:38px; border-radius:50%; background:#f4f3f0; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .bell .dot{ position:absolute; top:6px; right:7px; width:8px; height:8px; border-radius:50%; background:var(--orange); border:2px solid var(--surface); }
+
+  .hero-report{
+    position:relative; width:100%; margin-top:20px; border:none; cursor:pointer;
+    background:linear-gradient(145deg,var(--orange),var(--orange-dark));
+    border-radius:26px; padding:26px 20px; text-align:left;
+    display:flex; align-items:center; gap:16px;
+    box-shadow:0 16px 30px -12px rgba(235,104,52,.55);
+    overflow:visible;
+  }
+  .hero-report:active{ transform:scale(.98); }
+  .hero-ring{
+    position:absolute; inset:0; border-radius:26px;
+    box-shadow:0 0 0 0 rgba(235,104,52,.55);
+    animation:pulseRing 2.2s ease-out infinite;
+    pointer-events:none;
+  }
+  @keyframes pulseRing{
+    0%{ box-shadow:0 0 0 0 rgba(235,104,52,.45); }
+    75%{ box-shadow:0 0 0 16px rgba(235,104,52,0); }
+    100%{ box-shadow:0 0 0 0 rgba(235,104,52,0); }
+  }
+  .hero-icon{ font-size:34px; flex:0 0 auto; filter:drop-shadow(0 2px 3px rgba(0,0,0,.2)); }
+  .hero-text{ color:#fff; font-size:15.5px; line-height:1.35; font-weight:600; }
+  .hero-text strong{ font-size:19px; font-weight:800; }
+
+  .stat-row{ display:flex; gap:8px; margin-top:16px; }
+  .chip{ flex:1; border-radius:16px; padding:11px 8px; text-align:center; }
+  .chip-value{ display:block; font-size:16px; font-weight:800; }
+  .chip-label{ display:block; font-size:10.5px; color:var(--ink-2); margin-top:2px; line-height:1.25; }
+  .chip-orange{ background:var(--orange-pale); }
+  .chip-orange .chip-value{ color:var(--orange-dark); }
+  .chip-green{ background:var(--green-pale); }
+  .chip-green .chip-value{ color:var(--green-dark); }
+  .chip-neutral{ background:#f2f1ee; }
+
+  .activity-list{ display:flex; flex-direction:column; gap:2px; }
+  .activity-item{ display:flex; align-items:flex-start; gap:12px; padding:10px 4px; border-bottom:1px solid var(--hairline); }
+  .activity-item:last-child{ border-bottom:none; }
+  .status-dot{ width:10px; height:10px; border-radius:50%; margin-top:5px; flex:0 0 auto; }
+  .dot-orange{ background:var(--orange); }
+  .dot-green{ background:var(--green); }
+  .status-dot.pulse{ box-shadow:0 0 0 0 rgba(235,104,52,.5); animation:dotPulse 1.6s ease-out infinite; }
+  @keyframes dotPulse{
+    0%{ box-shadow:0 0 0 0 rgba(235,104,52,.45); }
+    70%{ box-shadow:0 0 0 7px rgba(235,104,52,0); }
+    100%{ box-shadow:0 0 0 0 rgba(235,104,52,0); }
+  }
+  .activity-title{ font-size:13.5px; font-weight:700; }
+  .activity-sub{ font-size:12px; color:var(--ink-2); margin-top:1px; }
+  .empty-hint{ font-size:12.5px; color:var(--ink-muted); padding:10px 4px; }
+
+  /* ---------- Seguimiento ---------- */
+  .filter-row{ display:flex; gap:8px; margin-bottom:16px; }
+  .filter-pill{ border:1px solid var(--hairline); background:#fff; padding:7px 14px; border-radius:999px; font-size:12.5px; font-weight:700; color:var(--ink-2); cursor:pointer; }
+  .filter-pill.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  .case-list{ display:flex; flex-direction:column; gap:12px; }
+  .case-card{ border:1px solid var(--hairline); border-radius:18px; padding:14px; background:#fff; }
+  .case-card.open{ border-color:#f3c4a9; background:linear-gradient(180deg,#fff8f5,#ffffff); }
+  .case-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .badge{ font-size:11.5px; font-weight:800; padding:5px 10px; border-radius:999px; display:inline-flex; align-items:center; gap:5px; }
+  .badge-orange{ background:var(--orange-pale); color:var(--orange-dark); }
+  .badge-green{ background:var(--green-pale); color:var(--green-dark); }
+  .badge.pulse{ animation:badgePulse 1.8s ease-in-out infinite; }
+  @keyframes badgePulse{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
+  .case-time{ font-size:11.5px; color:var(--ink-muted); font-weight:600; }
+  .case-zone{ font-size:14.5px; font-weight:700; }
+  .case-meta{ font-size:12px; color:var(--ink-2); margin-top:2px; }
+
+  .case-progress{ display:flex; gap:4px; margin-top:12px; }
+  .progress-step{ flex:1; height:5px; border-radius:3px; background:var(--hairline); }
+  .progress-step.done{ background:var(--green); }
+  .progress-step.active{ background:var(--orange); }
+  .case-steps-labels{ display:flex; justify-content:space-between; margin-top:5px; }
+  .case-steps-labels span{ font-size:9px; color:var(--ink-muted); font-weight:600; flex:1; text-align:center; }
+  .case-steps-labels span:first-child{ text-align:left; }
+  .case-steps-labels span:last-child{ text-align:right; }
+
+  /* ---------- Reportar ---------- */
+  .field-label{ font-size:12.5px; font-weight:700; color:var(--ink-2); margin:16px 0 8px; }
+  .chip-select, .toggle-row, .segmented{ display:flex; gap:8px; flex-wrap:wrap; }
+  .opt-chip{ border:1.5px solid var(--hairline); background:#fff; padding:9px 14px; border-radius:14px; font-size:13px; font-weight:700; color:var(--ink-2); cursor:pointer; }
+  .opt-chip.selected{ background:var(--orange); border-color:var(--orange); color:#fff; }
+  #preventivos-registro-state .opt-chip.selected{ background:var(--green); border-color:var(--green); }
+
+  .toggle-btn{ flex:1; border:1.5px solid var(--hairline); background:#fff; padding:11px; border-radius:14px; font-size:13.5px; font-weight:800; color:var(--ink-2); cursor:pointer; }
+  .toggle-btn.toggle-orange.selected{ background:var(--orange); border-color:var(--orange); color:#fff; }
+  .toggle-btn.toggle-green.selected{ background:var(--green); border-color:var(--green); color:#fff; }
+
+  .segmented{ background:#f2f1ee; padding:4px; border-radius:14px; gap:0; }
+  .seg-btn{ flex:1; border:none; background:transparent; padding:9px 6px; border-radius:11px; font-size:12.5px; font-weight:700; color:var(--ink-2); cursor:pointer; }
+  .seg-btn.selected{ background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+
+  .upload-box{ border:2px dashed var(--hairline); border-radius:16px; padding:18px; text-align:center; font-size:13px; color:var(--ink-muted); font-weight:600; }
+  .textarea-mock{ width:100%; min-height:64px; border:1.5px solid var(--hairline); border-radius:14px; padding:12px; font-size:13px; font-family:inherit; color:var(--ink-2); resize:none; }
+
+  .btn-submit{ width:100%; border:none; margin-top:22px; padding:15px; border-radius:16px; font-size:15px; font-weight:800; color:#fff; cursor:pointer;
+    background:linear-gradient(145deg,var(--green),var(--green-dark)); box-shadow:0 14px 26px -12px rgba(10,143,10,.5); }
+  .btn-submit:active{ transform:scale(.98); }
+
+  .confirm-state{ display:flex; flex-direction:column; align-items:center; text-align:center; padding-top:90px; }
+  .hidden{ display:none !important; }
+  .confirm-check{ font-size:56px; animation:popIn .4s ease; }
+  @keyframes popIn{ 0%{ transform:scale(.5); opacity:0; } 100%{ transform:scale(1); opacity:1; } }
+  .confirm-title{ font-size:19px; font-weight:800; margin-top:14px; }
+  .confirm-sub{ font-size:13px; color:var(--ink-2); margin-top:8px; line-height:1.5; }
+  .confirm-state .btn-submit{ max-width:220px; }
+
+  /* ---------- Preventivos ---------- */
+  .progress-summary{ margin-bottom:18px; }
+  .progress-bar-outer{ height:9px; background:#f2f1ee; border-radius:6px; overflow:hidden; }
+  .progress-bar-inner{ height:100%; background:linear-gradient(90deg,var(--green),#0dbf0d); border-radius:6px; transition:width .4s ease; }
+  .progress-summary-text{ font-size:12.5px; color:var(--ink-2); margin-top:8px; }
+
+  .preventivo-list{ display:flex; flex-direction:column; gap:10px; }
+  .prev-item{ display:flex; align-items:center; gap:12px; border:1px solid var(--hairline); border-radius:16px; padding:12px; background:#fff; }
+  .prev-time{ font-size:12.5px; font-weight:800; width:56px; flex:0 0 auto; color:var(--ink-2); }
+  .prev-body{ flex:1; }
+  .prev-title{ font-size:13.5px; font-weight:700; }
+  .prev-sub{ font-size:11.5px; color:var(--ink-muted); margin-top:1px; }
+  .prev-status{ font-size:10.5px; font-weight:800; text-align:right; max-width:80px; line-height:1.3; flex:0 0 auto; }
+  .status-green{ color:var(--green-dark); }
+  .status-orange{ color:var(--orange-dark); }
+  .prev-item.pending{ background:var(--orange-pale); border-color:#f3c4a9; }
+  .prev-item.adhoc{ background:var(--green-pale); border-color:#bfe6bf; }
+  .prev-btn{ border:none; background:var(--orange); color:#fff; font-size:11.5px; font-weight:800; padding:9px 12px; border-radius:11px; cursor:pointer; white-space:nowrap; }
+  .prev-btn:active{ transform:scale(.96); }
+  .tag-adhoc{ display:inline-block; font-size:9px; font-weight:800; color:var(--ink-muted); background:#eeede8; padding:2px 7px; border-radius:999px; margin-left:4px; vertical-align:middle; }
+
+  .screen-header-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .screen-header-row .screen-header{ margin:16px 0; }
+  .btn-add-adhoc{ border:none; background:var(--green-pale); color:var(--green-dark); font-size:11px; font-weight:800; padding:9px 11px; border-radius:12px; cursor:pointer; white-space:nowrap; flex:0 0 auto; }
+  .btn-add-adhoc:active{ transform:scale(.96); }
+  .form-hint{ font-size:12px; color:var(--ink-muted); margin:-4px 0 6px; line-height:1.45; }
+  .input-mock{ width:100%; border:1.5px solid var(--hairline); border-radius:14px; padding:11px 14px; font-size:13px; font-family:inherit; color:var(--ink); }
+  .input-mock::placeholder{ color:#a8a7a1; }
+
+  /* ---------- Panel ---------- */
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat-tile{ border:1px solid var(--hairline); border-radius:18px; padding:14px; background:#fff; }
+  .stat-value{ font-size:24px; font-weight:800; line-height:1; }
+  .stat-value .stat-unit{ font-size:13px; font-weight:700; color:var(--ink-muted); margin-left:2px; }
+  .stat-orange{ color:var(--orange-dark); }
+  .stat-green{ color:var(--green-dark); }
+  .stat-label{ font-size:11.5px; color:var(--ink-2); margin-top:5px; line-height:1.3; }
+
+  .bar-list{ display:flex; flex-direction:column; gap:11px; }
+  .bar-row{ display:flex; align-items:center; gap:10px; }
+  .bar-label{ font-size:12px; font-weight:700; width:60px; flex:0 0 auto; color:var(--ink-2); }
+  .bar-track{ flex:1; height:9px; background:#f2f1ee; border-radius:5px; overflow:hidden; }
+  .bar-fill{ height:100%; background:linear-gradient(90deg,var(--orange),var(--orange-dark)); border-radius:5px; }
+  .bar-val{ font-size:12px; font-weight:800; width:16px; text-align:right; flex:0 0 auto; }
+
+  .insight-card{ background:#fff7ed; border:1px solid #f3d9b8; border-radius:16px; padding:13px 14px; font-size:12.5px; color:#6b4423; line-height:1.5; font-weight:600; }
+  .data-note{ font-size:10.5px; color:var(--ink-muted); margin-top:14px; line-height:1.5; }
+
+  /* ---------- tab bar ---------- */
+  .tabbar{
+    flex:0 0 auto; display:flex; align-items:center; justify-content:space-around;
+    border-top:1px solid var(--hairline); background:#fff; position:relative; z-index:10;
+    padding-top:10px; padding-bottom:calc(env(safe-area-inset-bottom) + 10px);
+  }
+  .tab{ border:none; background:none; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:19px; color:var(--ink-muted); cursor:pointer; padding:6px 4px; width:56px; }
+  .tab span{ font-size:9.5px; font-weight:700; color:var(--ink-muted); }
+  .tab.active{ color:var(--orange-dark); }
+  .tab.active span{ color:var(--orange-dark); }
+  .fab{
+    border:none; cursor:pointer; width:60px; height:60px; border-radius:50%; flex:0 0 auto;
+    background:linear-gradient(145deg,var(--orange),var(--orange-dark));
+    color:#fff; font-size:24px; display:flex; align-items:center; justify-content:center;
+    position:relative; top:-22px; box-shadow:0 12px 22px -8px rgba(235,104,52,.65), 0 0 0 6px #fff;
+  }
+  .fab:active{ transform:scale(.95); }
+</style>
+</head>
+<body>
+
+  <div class="screens">
+
+    <!-- INICIO -->
+    <section id="screen-inicio" class="screen active">
+      <div class="topbar">
+        <div>
+          <div class="hello">Hola 👋</div>
+          <div class="venue">Aldea Asiática · Granada</div>
+        </div>
+        <div class="bell">🔔<span class="dot"></span></div>
+      </div>
+
+      <button class="hero-report" data-target="screen-reportar">
+        <span class="hero-ring"></span>
+        <span class="hero-icon">🚨</span>
+        <span class="hero-text">Reportar mal olor<br><strong>ahora</strong></span>
+      </button>
+
+      <div class="stat-row">
+        <div class="chip chip-orange"><span class="chip-value" id="stat-en-curso">0</span><span class="chip-label">En curso</span></div>
+        <div class="chip chip-green"><span class="chip-value">92%</span><span class="chip-label">Cumplimiento</span></div>
+        <div class="chip chip-neutral"><span class="chip-value">6:30pm</span><span class="chip-label">Próx. preventivo</span></div>
+      </div>
+
+      <div class="section-title">Actividad reciente</div>
+      <div class="activity-list" id="activity-list">
+        <div id="activity-list-live"></div>
+        <div class="activity-item">
+          <span class="status-dot dot-green"></span>
+          <div class="activity-body">
+            <div class="activity-title">Limpieza preventiva — Salón</div>
+            <div class="activity-sub">Hoy, 11:04 a.m. · A tiempo</div>
+          </div>
+        </div>
+        <div class="activity-item">
+          <span class="status-dot dot-green"></span>
+          <div class="activity-body">
+            <div class="activity-title">Salón — mal olor resuelto</div>
+            <div class="activity-sub">Ayer, 8:32 p.m. · Duración 37 min</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEGUIMIENTO -->
+    <section id="screen-seguimiento" class="screen">
+      <div class="screen-header">Seguimiento de reportes</div>
+      <div class="filter-row">
+        <button class="filter-pill active">Todos</button>
+        <button class="filter-pill">En curso</button>
+        <button class="filter-pill">Resueltos</button>
+      </div>
+      <div class="case-list" id="case-list">
+        <div id="case-list-live"></div>
+        <div class="case-card">
+          <div class="case-top">
+            <span class="badge badge-green">✓ Resuelto</span>
+            <span class="case-time">8:00 p.m. · ayer</span>
+          </div>
+          <div class="case-zone">📍 Salón</div>
+          <div class="case-meta">Duración 37 min · No afectó cliente</div>
+        </div>
+        <div class="case-card">
+          <div class="case-top">
+            <span class="badge badge-green">✓ Resuelto</span>
+            <span class="case-time">2:55 p.m. · 24 jun</span>
+          </div>
+          <div class="case-zone">📍 Salón</div>
+          <div class="case-meta">Duración 55 min · Afectó a un cliente</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORTAR -->
+    <section id="screen-reportar" class="screen">
+      <div id="reportar-form-state">
+        <div class="screen-header">Reportar mal olor</div>
+
+        <div class="field-label">Zona</div>
+        <div class="chip-select">
+          <button class="opt-chip selected">🍽️ Salón</button>
+          <button class="opt-chip">🍳 Cocina</button>
+          <button class="opt-chip">🚻 Baños</button>
+        </div>
+
+        <div class="field-label">¿Afectó a un cliente?</div>
+        <div class="toggle-row">
+          <button class="toggle-btn toggle-orange selected">Sí</button>
+          <button class="toggle-btn toggle-green">No</button>
+        </div>
+
+        <div class="field-label">Intensidad percibida</div>
+        <div class="segmented">
+          <button class="seg-btn">Leve</button>
+          <button class="seg-btn selected">Moderado</button>
+          <button class="seg-btn">Fuerte</button>
+        </div>
+
+        <div class="field-label">Foto (opcional)</div>
+        <div class="upload-box">📷 Agregar foto</div>
+
+        <div class="field-label">Comentario (opcional)</div>
+        <textarea class="textarea-mock" id="reportar-comentario" placeholder="Ej: se siente cerca del sifón del salón..."></textarea>
+
+        <button class="btn-submit" id="btn-enviar-reporte">Enviar reporte</button>
+      </div>
+
+      <div id="reportar-confirm-state" class="confirm-state hidden">
+        <div class="confirm-check">✅</div>
+        <div class="confirm-title">¡Reporte enviado!</div>
+        <div class="confirm-sub" id="reportar-confirm-sub">El equipo de limpieza ya fue notificado.</div>
+        <button class="btn-submit" id="btn-volver-inicio">Listo</button>
+      </div>
+    </section>
+
+    <!-- PREVENTIVOS -->
+    <section id="screen-preventivos" class="screen">
+
+      <div id="preventivos-list-state">
+        <div class="screen-header-row">
+          <div class="screen-header">Limpiezas preventivas</div>
+          <button class="btn-add-adhoc" id="btn-abrir-registro">➕ Registrar aseo</button>
+        </div>
+        <div class="progress-summary">
+          <div class="progress-bar-outer"><div class="progress-bar-inner" id="prev-progress-bar" style="width:75%"></div></div>
+          <div class="progress-summary-text"><strong id="prev-progress-text">3 de 4</strong> programadas completadas · <strong id="adhoc-count">2</strong> adicionales hoy</div>
+        </div>
+
+        <div class="section-title">Programadas</div>
+        <div class="preventivo-list">
+          <div class="prev-item">
+            <div class="prev-time">6:30 a.m.</div>
+            <div class="prev-body">
+              <div class="prev-title">Aseo preventivo</div>
+              <div class="prev-sub">Fabián · Logística</div>
+            </div>
+            <div class="prev-status status-green">✓ A tiempo</div>
+          </div>
+          <div class="prev-item">
+            <div class="prev-time">11:30 a.m.</div>
+            <div class="prev-body">
+              <div class="prev-title">Aseo preventivo</div>
+              <div class="prev-sub">Rafael · Steward</div>
+            </div>
+            <div class="prev-status status-green">✓ A tiempo</div>
+          </div>
+          <div class="prev-item">
+            <div class="prev-time">3:00 p.m.</div>
+            <div class="prev-body">
+              <div class="prev-title">Aseo preventivo</div>
+              <div class="prev-sub">Bladimir · Logística</div>
+            </div>
+            <div class="prev-status status-orange">⏱ Tarde (+15 min)</div>
+          </div>
+          <div class="prev-item pending" id="prev-pending-item">
+            <div class="prev-time">6:30 p.m.</div>
+            <div class="prev-body">
+              <div class="prev-title">Aseo preventivo</div>
+              <div class="prev-sub">Por asignar</div>
+            </div>
+            <button class="prev-btn" id="btn-marcar-hecha">Marcar hecha</button>
+          </div>
+        </div>
+
+        <div class="section-title">Registradas sin programar</div>
+        <div class="preventivo-list" id="adhoc-list">
+          <div id="adhoc-list-live"></div>
+          <div class="prev-item adhoc">
+            <div class="prev-time">1:15 p.m.</div>
+            <div class="prev-body">
+              <div class="prev-title">Aseo preventivo — Salón</div>
+              <div class="prev-sub">Camila · Mesera <span class="tag-adhoc">Sin programar</span></div>
+            </div>
+            <div class="prev-status status-green">✓ Registrado</div>
+          </div>
+          <div class="prev-item adhoc">
+            <div class="prev-time">4:40 p.m.</div>
+            <div class="prev-body">
+              <div class="prev-title">Aseo preventivo — Salón</div>
+              <div class="prev-sub">Andrés · Cajero <span class="tag-adhoc">Sin programar</span></div>
+            </div>
+            <div class="prev-status status-green">✓ Registrado</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="preventivos-registro-state" class="hidden">
+        <div class="screen-header">Registrar aseo preventivo</div>
+        <p class="form-hint">Para cuando haces aseo aunque no haya mal olor ni esté programado — así queda todo el esfuerzo preventivo registrado.</p>
+
+        <div class="field-label">Zona</div>
+        <div class="chip-select">
+          <button class="opt-chip selected">🍽️ Salón</button>
+          <button class="opt-chip">🍳 Cocina</button>
+          <button class="opt-chip">🚻 Baños</button>
+        </div>
+
+        <div class="field-label">Tu nombre y rol</div>
+        <input type="text" class="input-mock" id="adhoc-responsable" placeholder="Ej: Camila · Mesera">
+
+        <div class="field-label">Método usado</div>
+        <div class="chip-select">
+          <button class="opt-chip selected">Agua caliente + Límpido</button>
+          <button class="opt-chip">Barrido y trapeado</button>
+          <button class="opt-chip">Otro</button>
+        </div>
+
+        <div class="field-label">Comentario (opcional)</div>
+        <textarea class="textarea-mock" placeholder="Ej: se hizo aseo extra antes de que llegaran los clientes..."></textarea>
+
+        <button class="btn-submit" id="btn-guardar-registro">Guardar registro</button>
+      </div>
+
+      <div id="preventivos-confirm-state" class="confirm-state hidden">
+        <div class="confirm-check">✅</div>
+        <div class="confirm-title">¡Aseo registrado!</div>
+        <div class="confirm-sub">Queda guardado en el historial de hoy,<br>aunque no se haya presentado mal olor.</div>
+        <button class="btn-submit" id="btn-volver-preventivos">Listo</button>
+      </div>
+
+    </section>
+
+    <!-- PANEL -->
+    <section id="screen-panel" class="screen">
+      <div class="screen-header">Panel — últimas 3 semanas</div>
+      <div class="stat-grid">
+        <div class="stat-tile">
+          <div class="stat-value">15</div>
+          <div class="stat-label">Turnos con mal olor</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value stat-orange">11</div>
+          <div class="stat-label">Afectaron al cliente</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value">92<span class="stat-unit">min</span></div>
+          <div class="stat-label">Duración promedio</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value stat-green">100%</div>
+          <div class="stat-label">Preventivos cumplidos</div>
+        </div>
+      </div>
+
+      <div class="section-title">Episodios por franja horaria</div>
+      <div class="bar-list">
+        <div class="bar-row"><span class="bar-label">Noche</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bar-val">8</span></div>
+        <div class="bar-row"><span class="bar-label">Almuerzo</span><div class="bar-track"><div class="bar-fill" style="width:25%"></div></div><span class="bar-val">2</span></div>
+        <div class="bar-row"><span class="bar-label">Tarde</span><div class="bar-track"><div class="bar-fill" style="width:25%"></div></div><span class="bar-val">2</span></div>
+        <div class="bar-row"><span class="bar-label">Mañana</span><div class="bar-track"><div class="bar-fill" style="width:13%"></div></div><span class="bar-val">1</span></div>
+      </div>
+
+      <div class="section-title">Recomendación</div>
+      <div class="insight-card">💡 Reforzar el aseo preventivo antes de la franja noche (6:00–8:30 p. m.) — cuando se refuerza, no se ha registrado mal olor.</div>
+      <div class="data-note">Estas cifras son de tu matriz real (24 jun–14 jul). Los reportes y aseos nuevos que registres aquí se guardan en la base de datos compartida del equipo, no solo en este celular.</div>
+    </section>
+
+  </div>
+
+  <nav class="tabbar">
+    <button class="tab active" data-target="screen-inicio">🏠<span>Inicio</span></button>
+    <button class="tab" data-target="screen-seguimiento">📋<span>Casos</span></button>
+    <button class="fab" data-target="screen-reportar">🚨</button>
+    <button class="tab" data-target="screen-preventivos">🧹<span>Preventivo</span></button>
+    <button class="tab" data-target="screen-panel">📊<span>Panel</span></button>
+  </nav>
+
+<script type="module">
+  // ============================================================
+  // Firebase: base de datos compartida en tiempo real
+  // (configuración real en firebase-config.js — no tocar aquí)
+  // ============================================================
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+  import {
+    getAuth, signInAnonymously, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+  import {
+    initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+    collection, addDoc, doc, setDoc, query, orderBy, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+  import { firebaseConfig } from './firebase-config.js';
+
+  const ADHOC_SEED_COUNT = 2; // los 2 ejemplos ya escritos en el HTML (historial real de la matriz)
+  let dbRef = null; // se asigna más abajo si Firebase queda bien conectado
+
+  // ---------- utilidades ----------
+  function horaAhora(){
+    return new Date().toLocaleTimeString('es-CO', { hour:'numeric', minute:'2-digit' });
+  }
+  function fechaHoyId(){
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function formatoRelativo(ms){
+    if(!ms) return 'Hoy';
+    const fecha = new Date(ms);
+    const hoy = new Date();
+    const unDia = 24 * 60 * 60 * 1000;
+    const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime();
+    const inicioFecha = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()).getTime();
+    const dias = Math.round((inicioHoy - inicioFecha) / unDia);
+    if(dias <= 0) return 'Hoy';
+    if(dias === 1) return 'Ayer';
+    return fecha.toLocaleDateString('es-CO', { day:'numeric', month:'short' });
+  }
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = String(str == null ? '' : str);
+    return div.innerHTML;
+  }
+  function mostrarErrorInline(mensaje){
+    let el = document.getElementById('error-inline');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'error-inline';
+      el.style.cssText = 'position:fixed;left:16px;right:16px;bottom:96px;background:#fdece3;color:#c2481c;border:1px solid #f3c4a9;border-radius:14px;padding:12px 14px;font-size:12.5px;font-weight:700;text-align:center;z-index:80;box-shadow:0 8px 20px rgba(0,0,0,.15)';
+      document.body.appendChild(el);
+    }
+    el.textContent = mensaje;
+    el.style.display = 'block';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 4500);
+  }
+  function mostrarPantallaEstado(icono, titulo, mensajeHtml){
+    let el = document.getElementById('pantalla-estado');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'pantalla-estado';
+      el.style.cssText = 'position:fixed;inset:0;z-index:100;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 28px;';
+      document.body.appendChild(el);
+    }
+    el.innerHTML =
+      '<div style="font-size:44px;">' + icono + '</div>' +
+      '<div style="font-size:18px;font-weight:800;margin-top:14px;">' + escapeHtml(titulo) + '</div>' +
+      '<div style="font-size:13px;color:var(--ink-2);margin-top:10px;line-height:1.55;max-width:320px;">' + mensajeHtml + '</div>';
+  }
+
+  // ---------- navegación entre pantallas ----------
+  const screens = document.querySelectorAll('.screen');
+  const navButtons = document.querySelectorAll('.tab, .fab, [data-target]');
+
+  function goTo(targetId){
+    screens.forEach(s => s.classList.toggle('active', s.id === targetId));
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.target === targetId));
+    const target = document.getElementById(targetId);
+    if(target) target.scrollTop = 0;
+  }
+
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-target');
+      if(target) goTo(target);
+    });
+  });
+
+  // ---------- chips / toggles / segmentado (Reportar y Registrar aseo) ----------
+  document.querySelectorAll('.opt-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      chip.parentElement.querySelectorAll('.opt-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+  document.querySelectorAll('#screen-reportar .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
+  document.querySelectorAll('#screen-reportar .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
+
+  // ---------- construir tarjetas a partir de datos de Firestore ----------
+  function construirCaso(caso, pulse){
+    const el = document.createElement('div');
+    el.className = 'case-card open';
+    const afecto = caso.afectoCliente ? ' · Afectó a un cliente' : '';
+    const comentario = caso.comentario ? ('<div class="case-meta">"' + escapeHtml(caso.comentario) + '"</div>') : '';
+    el.innerHTML =
+      '<div class="case-top">' +
+        '<span class="badge badge-orange' + (pulse ? ' pulse' : '') + '">● Reportado</span>' +
+        '<span class="case-time">' + escapeHtml(caso.hora) + ' · ' + formatoRelativo(caso.createdAtMs).toLowerCase() + '</span>' +
+      '</div>' +
+      '<div class="case-zone">📍 ' + escapeHtml(caso.zona) + '</div>' +
+      '<div class="case-meta">' + escapeHtml(caso.intensidad) + afecto + '</div>' +
+      comentario +
+      '<div class="case-progress">' +
+        '<div class="progress-step done"></div><div class="progress-step"></div><div class="progress-step"></div><div class="progress-step"></div>' +
+      '</div>' +
+      '<div class="case-steps-labels"><span>Reportado</span><span>Atención</span><span>Limpieza</span><span>Resuelto</span></div>';
+    return el;
+  }
+
+  function construirActividad(caso, pulse){
+    const el = document.createElement('div');
+    el.className = 'activity-item';
+    el.innerHTML =
+      '<span class="status-dot dot-orange' + (pulse ? ' pulse' : '') + '"></span>' +
+      '<div class="activity-body">' +
+        '<div class="activity-title">' + escapeHtml(caso.zona) + ' — mal olor reportado</div>' +
+        '<div class="activity-sub">' + formatoRelativo(caso.createdAtMs) + ', ' + escapeHtml(caso.hora) + ' · En atención</div>' +
+      '</div>';
+    return el;
+  }
+
+  function construirAdhoc(item){
+    const el = document.createElement('div');
+    el.className = 'prev-item adhoc';
+    const metodo = item.metodo ? (' · ' + escapeHtml(item.metodo)) : '';
+    el.innerHTML =
+      '<div class="prev-time">' + escapeHtml(item.hora) + '</div>' +
+      '<div class="prev-body">' +
+        '<div class="prev-title">Aseo preventivo — ' + escapeHtml(item.zona) + '</div>' +
+        '<div class="prev-sub">' + escapeHtml(item.nombre) + metodo + ' <span class="tag-adhoc">Sin programar</span></div>' +
+      '</div>' +
+      '<div class="prev-status status-green">✓ Registrado</div>';
+    return el;
+  }
+
+  function aplicarScheduledDone(hora){
+    const item = document.getElementById('prev-pending-item');
+    if(!item) return;
+    item.classList.remove('pending');
+    item.querySelector('.prev-sub').textContent = 'Registrado' + (hora ? (' · ' + hora) : '');
+    const btn = document.getElementById('btn-marcar-hecha');
+    if(btn) btn.outerHTML = '<div class="prev-status status-green">✓ A tiempo</div>';
+    document.getElementById('prev-progress-bar').style.width = '100%';
+    document.getElementById('prev-progress-text').textContent = '4 de 4';
+  }
+
+  // ---------- Reportar mal olor → crea un caso real en Firestore ----------
+  document.getElementById('btn-enviar-reporte').addEventListener('click', async () => {
+    if(!dbRef){ mostrarErrorInline('La app todavía no está conectada. Revisa la configuración.'); return; }
+    const zonaRaw = document.querySelector('#screen-reportar .chip-select .selected').textContent.trim();
+    const zona = zonaRaw.replace(/^\S+\s*/, '');
+    const afectoCliente = document.querySelector('#screen-reportar .toggle-row .selected').textContent.trim() === 'Sí';
+    const intensidad = document.querySelector('#screen-reportar .segmented .selected').textContent.trim();
+    const comentario = document.getElementById('reportar-comentario').value.trim();
+    const hora = horaAhora();
+
+    const btn = document.getElementById('btn-enviar-reporte');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    try {
+      await addDoc(collection(dbRef, 'casos'), {
+        zona, afectoCliente, intensidad, comentario, hora, createdAtMs: Date.now()
+      });
+
+      document.getElementById('reportar-confirm-sub').innerHTML =
+        'El equipo de limpieza ya fue notificado.<br>Hora registrada: ' + hora + ' · ' + zona;
+
+      document.getElementById('reportar-form-state').classList.add('hidden');
+      document.getElementById('reportar-confirm-state').classList.remove('hidden');
+    } catch(err){
+      console.error(err);
+      mostrarErrorInline('No se pudo enviar el reporte. Revisa tu conexión e intenta de nuevo.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Enviar reporte';
+    }
+  });
+
+  document.getElementById('btn-volver-inicio').addEventListener('click', () => {
+    document.getElementById('reportar-form-state').classList.remove('hidden');
+    document.getElementById('reportar-confirm-state').classList.add('hidden');
+    document.getElementById('reportar-comentario').value = '';
+    goTo('screen-inicio');
+  });
+
+  // ---------- Preventivos: marcar la limpieza PROGRAMADA como hecha ----------
+  const btnMarcarHecha = document.getElementById('btn-marcar-hecha');
+  if(btnMarcarHecha){
+    btnMarcarHecha.addEventListener('click', async () => {
+      if(!dbRef){ mostrarErrorInline('La app todavía no está conectada. Revisa la configuración.'); return; }
+      btnMarcarHecha.disabled = true;
+      try {
+        await setDoc(doc(dbRef, 'preventivoProgramado', fechaHoyId()), {
+          done: true, hora: horaAhora(), updatedAtMs: Date.now()
+        });
+        // La actualización visual llega sola por el listener de más abajo,
+        // así se ve igual sin importar si lo marcaste tú o un compañero.
+      } catch(err){
+        console.error(err);
+        mostrarErrorInline('No se pudo guardar. Intenta de nuevo.');
+        btnMarcarHecha.disabled = false;
+      }
+    });
+  }
+
+  // ---------- Preventivos: registrar aseo SIN programar ----------
+  document.getElementById('btn-abrir-registro').addEventListener('click', () => {
+    document.getElementById('preventivos-list-state').classList.add('hidden');
+    document.getElementById('preventivos-registro-state').classList.remove('hidden');
+  });
+
+  document.getElementById('btn-guardar-registro').addEventListener('click', async () => {
+    if(!dbRef){ mostrarErrorInline('La app todavía no está conectada. Revisa la configuración.'); return; }
+    const chipGroups = document.querySelectorAll('#preventivos-registro-state .chip-select');
+    const zonaRaw = chipGroups[0].querySelector('.selected').textContent.trim();
+    const zona = zonaRaw.replace(/^\S+\s*/, '');
+    const metodo = chipGroups[1].querySelector('.selected').textContent.trim();
+    const nombreInput = document.getElementById('adhoc-responsable');
+    const nombre = nombreInput.value.trim() || 'Colaborador';
+    const comentarioInput = document.querySelector('#preventivos-registro-state .textarea-mock');
+    const comentario = comentarioInput ? comentarioInput.value.trim() : '';
+    const hora = horaAhora();
+
+    const btn = document.getElementById('btn-guardar-registro');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    try {
+      await addDoc(collection(dbRef, 'adhoc'), {
+        zona, nombre, metodo, comentario, hora, createdAtMs: Date.now()
+      });
+
+      document.getElementById('preventivos-registro-state').classList.add('hidden');
+      document.getElementById('preventivos-confirm-state').classList.remove('hidden');
+
+      nombreInput.value = '';
+      if(comentarioInput) comentarioInput.value = '';
+      chipGroups.forEach(group => {
+        group.querySelectorAll('.opt-chip').forEach((chip, i) => chip.classList.toggle('selected', i === 0));
+      });
+    } catch(err){
+      console.error(err);
+      mostrarErrorInline('No se pudo guardar el registro. Intenta de nuevo.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Guardar registro';
+    }
+  });
+
+  document.getElementById('btn-volver-preventivos').addEventListener('click', () => {
+    document.getElementById('preventivos-confirm-state').classList.add('hidden');
+    document.getElementById('preventivos-list-state').classList.remove('hidden');
+  });
+
+  // ============================================================
+  // Conexión: autenticación anónima + escucha en tiempo real
+  // ============================================================
+  const NOT_CONFIGURED = !firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf('PEGA_AQUI') !== -1;
+
+  if(NOT_CONFIGURED){
+    mostrarPantallaEstado(
+      '🔧',
+      'Falta un paso',
+      'Esta app todavía no está conectada a la base de datos del equipo.<br>Abre <strong>firebase-config.js</strong> y sigue las instrucciones escritas ahí arriba (toma unos 5 minutos, es gratis).'
+    );
+  } else {
+    try {
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      dbRef = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
+      });
+
+      let listenersIniciados = false;
+      onAuthStateChanged(auth, (user) => {
+        if(user && !listenersIniciados){
+          listenersIniciados = true;
+          iniciarListeners(dbRef);
+        }
+      });
+
+      signInAnonymously(auth).catch((err) => {
+        console.error(err);
+        mostrarPantallaEstado(
+          '⚠️',
+          'No se pudo conectar',
+          'Revisa que activaste el inicio de sesión "Anonymous" en Firebase → Authentication → Sign-in method.<br><br>Detalle técnico: ' + escapeHtml(err.code || err.message)
+        );
+      });
+    } catch(err){
+      console.error(err);
+      mostrarPantallaEstado(
+        '⚠️',
+        'No se pudo conectar',
+        'Revisa que copiaste bien los valores en firebase-config.js.<br><br>Detalle técnico: ' + escapeHtml(err.message)
+      );
+    }
+  }
+
+  function iniciarListeners(db){
+    let casosListo = false;
+    const qCasos = query(collection(db, 'casos'), orderBy('createdAtMs', 'desc'));
+    onSnapshot(qCasos, (snap) => {
+      const liveCasos = document.getElementById('case-list-live');
+      const liveActividad = document.getElementById('activity-list-live');
+      liveCasos.innerHTML = '';
+      liveActividad.innerHTML = '';
+      const nuevos = new Set();
+      if(casosListo){
+        snap.docChanges().forEach(c => { if(c.type === 'added') nuevos.add(c.doc.id); });
+      }
+      snap.forEach(docSnap => {
+        const caso = docSnap.data();
+        const pulse = nuevos.has(docSnap.id);
+        liveCasos.appendChild(construirCaso(caso, pulse));
+        liveActividad.appendChild(construirActividad(caso, pulse));
+      });
+      document.getElementById('stat-en-curso').textContent = String(snap.size);
+      casosListo = true;
+    }, (err) => console.warn('No se pudieron leer los reportes:', err));
+
+    const qAdhoc = query(collection(db, 'adhoc'), orderBy('createdAtMs', 'desc'));
+    onSnapshot(qAdhoc, (snap) => {
+      const liveAdhoc = document.getElementById('adhoc-list-live');
+      liveAdhoc.innerHTML = '';
+      snap.forEach(docSnap => liveAdhoc.appendChild(construirAdhoc(docSnap.data())));
+      document.getElementById('adhoc-count').textContent = String(ADHOC_SEED_COUNT + snap.size);
+    }, (err) => console.warn('No se pudieron leer los aseos registrados:', err));
+
+    onSnapshot(doc(db, 'preventivoProgramado', fechaHoyId()), (docSnap) => {
+      if(docSnap.exists() && docSnap.data().done){
+        aplicarScheduledDone(docSnap.data().hora);
+      }
+    }, (err) => console.warn('No se pudo leer el estado del aseo programado:', err));
+  }
+
+  // ---------- service worker (para que abra sin señal) ----------
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* no disponible, la app sigue funcionando online */ });
+    });
+  }
+</script>
+</body>
+</html>
