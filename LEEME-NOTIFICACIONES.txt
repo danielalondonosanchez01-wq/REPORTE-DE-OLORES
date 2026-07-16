@@ -1,0 +1,127 @@
+============================================================
+NOTIFICACIONES PUSH — cómo terminar de activarlas
+(que suene/vibre el celular aunque esté bloqueado o la app cerrada)
+============================================================
+
+Qué se agregó en esta actualización:
+- La campana 🔔 ya funciona: muestra un número con los avisos nuevos y,
+  al tocarla, abre un historial de los últimos reportes.
+- Mientras la app está abierta, ahora aparece un aviso en pantalla apenas
+  alguien reporta un mal olor (esto ya funciona sin que hagas nada más).
+- Para que el celular avise aunque esté bloqueado o la app cerrada (como
+  WhatsApp), falta hacer los pasos de abajo UNA sola vez. Toma unos 15-20
+  minutos la primera vez. No hay que instalar nada en tu computador — todo
+  se hace desde el navegador.
+
+------------------------------------------------------------
+PASO 1 — Sube los archivos nuevos a GitHub (como ya sabes hacerlo)
+------------------------------------------------------------
+Entra a tu repositorio en GitHub → "Add file" → "Upload files" → arrastra
+estos 2 archivos (reemplazan a los que ya estaban):
+  - index.html
+  - sw.js
+Confirma el reemplazo. (El vapidKey de firebase-config.js lo agregas en el
+Paso 3, así que ese archivo lo vuelves a subir después).
+
+------------------------------------------------------------
+PASO 2 — Genera la "llave" de notificaciones (VAPID key)
+------------------------------------------------------------
+1. Ve a https://console.firebase.google.com y entra a tu proyecto
+   "reporte-de-olores".
+2. Ícono de engranaje ⚙️ (junto a "Descripción general del proyecto")
+   → "Configuración del proyecto".
+3. Pestaña "Cloud Messaging" (arriba).
+4. Baja hasta "Web configuration" → "Web Push certificates".
+5. Botón "Generate key pair". Aparece una clave larga de texto.
+6. Cópiala.
+7. Abre firebase-config.js (el que tienes en tu computador, el de este
+   mismo paquete) y reemplaza donde dice:
+        vapidKey: "PEGA_AQUI_TU_vapidKey"
+   por:
+        vapidKey: "LA_CLAVE_QUE_COPIASTE"
+8. Sube ese firebase-config.js actualizado a GitHub (Add file → Upload
+   files, reemplaza el que ya estaba).
+
+------------------------------------------------------------
+PASO 3 — Activa el plan "Blaze" en Firebase
+------------------------------------------------------------
+Esto es obligatorio para poder enviar notificaciones automáticas: Firebase
+exige tarjeta de crédito registrada aunque el uso se quede en $0.
+
+1. En Firebase Console, esquina inferior izquierda, donde dice el nombre
+   del plan (probablemente "Spark") → clic → "Actualizar" / "Upgrade".
+2. Elige "Blaze — Pago por uso" y sigue los pasos para registrar una
+   tarjeta.
+3. Con el volumen de reportes de tu equipo (unos pocos al día), el costo
+   esperado es $0 — Firebase incluye una cuota gratis mensual de sobra
+   para esto. Si algún mes se acercara a superarla, Firebase te avisa
+   antes por correo.
+
+------------------------------------------------------------
+PASO 4 — Publica la función que envía las notificaciones
+------------------------------------------------------------
+Esta es la parte "técnica", pero se hace copiando y pegando comandos en
+una terminal que abre el navegador — no instalas nada en tu computador.
+
+1. Ve a https://console.cloud.google.com y asegúrate de que el proyecto
+   seleccionado arriba (junto al logo) sea "reporte-de-olores".
+2. Arriba a la derecha, busca el ícono de terminal ">_ " (Cloud Shell) y
+   haz clic. Se abre un panel de texto negro en la parte de abajo —
+   espera a que cargue (puede tardar 1 minuto la primera vez).
+3. En el menú de tres puntos (⋮) de ese panel de Cloud Shell → "Upload" /
+   "Cargar archivo" → selecciona en tu computador el archivo
+   "pwa_app_reportar_olores.zip" que te compartí (el mismo paquete
+   completo de la app).
+4. Copia y pega estos comandos uno por uno en la terminal negra, dando
+   Enter después de cada uno (algunos tardan 1-2 minutos, espera a que
+   termine antes de pegar el siguiente):
+
+   unzip -o pwa_app_reportar_olores.zip
+   cd pwa
+   npm install -g firebase-tools
+   firebase login
+
+5. El comando "firebase login" va a mostrar un link — dale clic (o
+   Cloud Shell abre una ventana de autorización sola) y entra con la
+   MISMA cuenta de Google con la que creaste el proyecto de Firebase.
+   Acepta los permisos.
+
+6. Sigue con estos dos últimos comandos:
+
+   cd functions && npm install && cd ..
+   firebase deploy --only functions
+
+7. Al terminar debería decir algo como "✔ Deploy complete!". Si en vez
+   de eso sale un error mencionando la región (region), avísame el
+   mensaje exacto y te digo qué cambiar.
+
+------------------------------------------------------------
+PASO 5 — Activa las notificaciones en cada celular del equipo
+------------------------------------------------------------
+Una vez hiciste los pasos 1 a 4 (una sola vez, para todo el equipo), cada
+persona tiene que hacer esto en SU propio celular (una sola vez cada uno):
+
+1. Abrir la app "Reportar" desde el ícono de la pantalla de inicio
+   (no desde el navegador — tiene que ser la app instalada).
+2. Ir a la pestaña "Panel" (abajo, ícono 📊).
+3. Bajar hasta "Notificaciones push" y tocar el botón
+   "🔔 Activar notificaciones en este celular".
+4. El celular pregunta permiso — tocar "Permitir".
+
+Con eso, ese celular ya va a sonar/vibrar cuando alguien reporte un mal
+olor, incluso con el celular bloqueado o la app cerrada.
+
+------------------------------------------------------------
+Si algo no funciona
+------------------------------------------------------------
+- La campana 🔔 y el aviso en pantalla (mientras la app está abierta) YA
+  funcionan desde que subiste el Paso 1, sin necesidad de nada más.
+- Si el botón "Activar notificaciones" del Panel dice "Falta configurar",
+  es que falta el Paso 2 (vapidKey) o no se subió el firebase-config.js
+  actualizado.
+- Si dice "Bloqueadas", la persona las rechazó sin querer — tiene que
+  entrar a Ajustes del celular/navegador y permitir notificaciones para
+  esta app manualmente.
+- En iPhone, las notificaciones push solo funcionan si la app se abrió
+  desde el ícono instalado en la pantalla de inicio (no desde Safari
+  directamente), y con iOS 16.4 o más reciente.
